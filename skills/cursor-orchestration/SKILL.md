@@ -7,7 +7,7 @@ description: Keeps coding work in a coordinator workflow using cursor-agent dele
 
 ## Purpose
 
-Keep the main agent in the coordinator role for nontrivial coding work: plan, delegate bounded tasks, review outputs, integrate, verify, and report residual risk.
+Keep the main agent in the coordinator role for nontrivial coding work: plan, delegate bounded tasks, review outputs, integrate, verify, and report residual risk. Once implementation is delegated, the main agent stays out of the implementation lane.
 
 This skill does not define command syntax. Use the active `AGENTS.md` for exact cursor-agent commands, model choices, safety boundaries, and project rules. If those instructions are missing or unclear, ask instead of inventing them.
 
@@ -18,7 +18,21 @@ This skill does not define command syntax. Use the active `AGENTS.md` for exact 
 3. Delegate bounded exploration, implementation, test repair, migration, docs, or review work when it prevents main-context bloat.
 4. Keep prompts explicit: role, workspace, task, ownership, constraints, expected output, verification, blockers, and risks.
 5. Inspect every subagent result before trusting it: read changed files, review diffs, check boundaries, and run focused verification.
-6. Continue the loop until the task is complete or blocked by a real user, safety, or environment boundary.
+6. If more code, docs, tests, migrations, or config edits remain, delegate the next bounded slice instead of picking up the implementation directly.
+7. Continue the loop until the task is complete or blocked by a real user, safety, or environment boundary.
+
+## Loop guard
+
+After every observe, verification, review, interruption, or context-compaction checkpoint, re-establish the coordinator state before acting:
+
+1. Check the current diff and the last completed delegation.
+2. Name the remaining work as one or more bounded tasks.
+3. Delegate remaining implementation work to the appropriate subagent.
+4. Keep the main context focused on prompts, review, integration checks, and final synthesis.
+
+Do not continue with direct "I'm adding", "I'm updating", or "I'm fixing" implementation steps after a delegated loop has finished. If the next step would edit product code, tests, migrations, config, or user-facing docs, make it a follow-up delegation unless it is explicitly a tiny coordination edit.
+
+Tiny coordination edits are limited to conflict markers, exact mechanical syncs, prompt/doc wording, or copying an already-reviewed artifact. When in doubt, delegate.
 
 ## Delegation rules
 
@@ -37,7 +51,7 @@ When a delegated implementer misses something material:
 3. Delegate the correction to a Codex implementer subagent.
 4. Verify the follow-up output yourself with a diff review and focused tests.
 
-The main agent may still make minimal coordination edits, conflict resolutions, or documentation tweaks when they are clearly smaller than a new delegation and do not require broad code reasoning.
+The main agent may still make only tiny coordination edits when they are clearly smaller than a new delegation and do not require broad code reasoning. Do not use this exception for user-facing docs, config, tests, migrations, or product code.
 
 ## Reviews
 
