@@ -13,10 +13,12 @@ Prefer orchestration: plan locally, delegate bounded exploration or implementati
 
 - Explorers, researchers, and planners: Cursor CLI with `composer-2.5-fast`.
 - Reviewers: Cursor CLI with `claude-fable-5-thinking-high`.
-- Implementers, test fixers, migration agents, docs agents: use GPT-5.5 subagents when reasoning/correctness matters.
+- Implementers, test fixers, migration agents, docs agents: use a Codex subagent running the requested GPT model when reasoning/correctness matters.
 - Use Cursor `composer-2.5-fast` for volume-heavy implementation, especially frontend/UI, broad mechanical edits, and boilerplate.
-- Run an Opus reviewer after each completed implementation.
+- Run a scoped Fable reviewer after each completed implementation.
 - If Cursor fails after the appropriate escalated retry, use a Codex subagent fallback when delegation still helps.
+
+GPT subagent means the Codex subagent/multi-agent tool in the app, not Cursor CLI with a GPT model. Never run `cursor-agent` or the cursor-agent wrapper with `gpt-*` models. If the Codex subagent tool or requested GPT model is unavailable, report that blocker instead of switching tools. Cursor is only for the Cursor models named here: `composer-2.5-fast` and `claude-fable-5-thinking-high`.
 
 ## Cursor Commands
 
@@ -26,6 +28,8 @@ Prefer orchestration: plan locally, delegate bounded exploration or implementati
 - Ask mode: `--mode ask` for read-only explorer/researcher/reviewer tasks
 - Plan mode: `--mode plan` for read-only plans
 - Edit mode: omit `--mode`; assign exact writable paths
+
+Despite its name, `cursor-agent-codex` is a Cursor CLI wrapper, not a Codex subagent. Use it only with the Cursor models named above.
 
 ```sh
 /Users/martin.zahnd/.codex/bin/cursor-agent-codex -p --trust --model composer-2.5-fast --workspace <repo> --mode ask "<prompt>"

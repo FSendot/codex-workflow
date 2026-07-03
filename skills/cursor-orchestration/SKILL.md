@@ -42,6 +42,13 @@ Tiny coordination edits are limited to conflict markers, exact mechanical syncs,
 - Avoid launching agents with vague ownership or prompts that require them to rediscover the whole repository.
 - Do not launch new subagents for tiny tasks where delegation adds process without reducing risk or context load.
 
+## Model boundary
+
+- Cursor-agent is only for the Cursor models allowed by the active `AGENTS.md`.
+- The `cursor-agent-codex` wrapper is still Cursor CLI, not a Codex subagent.
+- GPT implementer, test-fixer, migration, or docs work means a Codex subagent, not cursor-agent with a `gpt-*` model.
+- Never run cursor-agent or its wrapper with `gpt-*` models. If no Codex subagent is available for GPT work, report that blocker instead of switching tools.
+
 ## Missed work
 
 When a delegated implementer misses something material:
