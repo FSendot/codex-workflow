@@ -18,6 +18,8 @@ Prefer orchestration: plan locally, delegate bounded exploration or implementati
 - Run a scoped Fable reviewer after each completed implementation.
 - If Cursor fails after the appropriate escalated retry, use a Codex subagent fallback when delegation still helps.
 
+Fable is a slow reviewer model. Scope its prompts tightly, expect it to take longer than implementer/explorer agents, and wait or poll for completion instead of treating a long run as a failure.
+
 GPT subagent means the Codex subagent/multi-agent tool in the app, not Cursor CLI with a GPT model. Never run `cursor-agent` or the cursor-agent wrapper with `gpt-*` models. If the Codex subagent tool or requested GPT model is unavailable, report that blocker instead of switching tools. Cursor is only for the Cursor models named here: `composer-2.5-fast` and `claude-fable-5-thinking-high`.
 
 ## Cursor Commands

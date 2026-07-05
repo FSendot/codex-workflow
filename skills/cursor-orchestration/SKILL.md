@@ -64,9 +64,10 @@ The main agent may still make only tiny coordination edits when they are clearly
 
 Run a Fable reviewer after implementation work that changes behavior, structure, tests, migrations, or docs with durable project policy.
 
-Prefer scoped reviews because Fable is expensive:
+Prefer scoped reviews because Fable is expensive and slow:
 
 - Review the changed files or focused diff, not the entire repository.
+- Expect Fable reviews to take longer than explorer or implementer agents; wait or poll instead of assuming the review is stuck.
 - Ask for findings first: bugs, regressions, missing tests, data loss, API drift, concurrency, and safety risks.
 - Provide the task brief, relevant constraints, and verification already run.
 - Treat the review as input, not authority; inspect findings and either fix, delegate fixes, or explicitly reject with evidence.
