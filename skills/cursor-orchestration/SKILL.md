@@ -1,6 +1,6 @@
 ---
 name: cursor-orchestration
-description: Keeps coding work in a coordinator workflow using cursor-agent delegation, scoped implementers, Codex follow-up agents, and Fable reviews. Use when the user asks to orchestrate or delegate code work, mentions cursor-agent, Fable, subagents, context-window bloat, or wants stronger adherence to the AGENTS.md delegation workflow.
+description: Keeps coding work in a coordinator workflow using cursor-agent delegation, scoped implementers, Codex follow-up agents, and staged Codex/Composer/Fable reviews. Use when the user asks to orchestrate or delegate code work, mentions cursor-agent, Fable, Composer, subagents, context-window bloat, or wants stronger adherence to the AGENTS.md delegation workflow.
 ---
 
 # Cursor Orchestration
@@ -62,15 +62,19 @@ The main agent may still make only tiny coordination edits when they are clearly
 
 ## Reviews
 
-Run a Fable reviewer after implementation work that changes behavior, structure, tests, migrations, or docs with durable project policy.
+Run staged reviews after each completed implementation.
 
-Prefer scoped reviews because Fable is expensive and slow:
+1. Codex reviewer first: run one Codex subagent review. If it finds material issues, delegate corrections, verify, and rerun Codex until green.
+2. Composer reviewers second: run multiple very scoped `composer-2.5-fast` reviewers, split by file, behavior surface, or risk axis. If any find material issues, delegate corrections, verify, and rerun the relevant Composer review set until all are green.
+3. Fable reviewer last: run one scoped `claude-fable-5-thinking-high` review only after Codex and Composer are green. If it finds material issues, delegate corrections, verify, and rerun Fable until green.
+
+Review prompts stay narrow:
 
 - Review the changed files or focused diff, not the entire repository.
-- Expect Fable reviews to take longer than explorer or implementer agents; wait or poll instead of assuming the review is stuck.
 - Ask for findings first: bugs, regressions, missing tests, data loss, API drift, concurrency, and safety risks.
 - Provide the task brief, relevant constraints, and verification already run.
-- Treat the review as input, not authority; inspect findings and either fix, delegate fixes, or explicitly reject with evidence.
+- Treat each review as input, not authority; inspect findings and either fix, delegate fixes, or explicitly reject with evidence.
+- Fable is expensive and slow; wait or poll instead of assuming the final review is stuck.
 
 ## Completion
 

@@ -12,13 +12,17 @@ Prefer orchestration: plan locally, delegate bounded exploration or implementati
 ## Agent Choice
 
 - Explorers, researchers, and planners: Cursor CLI with `composer-2.5-fast`.
-- Reviewers: Cursor CLI with `claude-fable-5-thinking-high`.
 - Implementers, test fixers, migration agents, docs agents: use a Codex subagent running the requested GPT model when reasoning/correctness matters.
 - Use Cursor `composer-2.5-fast` for volume-heavy implementation, especially frontend/UI, broad mechanical edits, and boilerplate.
-- Run a scoped Fable reviewer after each completed implementation.
+- Review pipeline after each completed implementation: Codex reviewer first, scoped Composer reviewers second, scoped Fable reviewer last.
 - If Cursor fails after the appropriate escalated retry, use a Codex subagent fallback when delegation still helps.
 
-Fable is a slow reviewer model. Scope its prompts tightly, expect it to take longer than implementer/explorer agents, and wait or poll for completion instead of treating a long run as a failure.
+Review correction loop:
+- Run one Codex subagent review first. If it finds material issues, delegate corrections, verify, and rerun the Codex review until it is green before moving on.
+- Then run multiple very scoped Composer `composer-2.5-fast` reviewers, preferably split by file, behavior surface, or risk axis. If any Composer reviewer finds material issues, delegate corrections, verify, and rerun the relevant Composer review set until all are green.
+- Last, run one scoped Fable `claude-fable-5-thinking-high` review. If Fable finds material issues, delegate corrections, verify, and rerun Fable until it is green.
+
+Fable is the final slow reviewer model. Scope its prompt tightly, run it only after Codex and Composer reviewers are green, expect it to take longer than implementer/explorer agents, and wait or poll for completion instead of treating a long run as a failure.
 
 GPT subagent means the Codex subagent/multi-agent tool in the app, not Cursor CLI with a GPT model. Never run `cursor-agent` or the cursor-agent wrapper with `gpt-*` models. If the Codex subagent tool or requested GPT model is unavailable, report that blocker instead of switching tools. Cursor is only for the Cursor models named here: `composer-2.5-fast` and `claude-fable-5-thinking-high`.
 
