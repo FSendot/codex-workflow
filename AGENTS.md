@@ -9,63 +9,15 @@ Prefer orchestration: plan locally, delegate bounded exploration or implementati
 - If a subagent returns partial work, fails, or finds new blockers, continue locally or re-delegate within scope.
 - Stop early only for user pause, approval/safety boundary, impossible requirement, or repeated no-progress blocker; report the exact blocker and next needed input.
 
-## Agent Choice
-
-- Explorers, researchers, and planners: Cursor CLI with `composer-2.5-fast`.
-- Implementers, test fixers, migration agents, docs agents: use a Codex subagent running the requested GPT model when reasoning/correctness matters.
-- Use Cursor `composer-2.5-fast` for volume-heavy implementation, especially frontend/UI, broad mechanical edits, and boilerplate.
-- Review pipeline after each completed implementation: Codex reviewer first, scoped Composer reviewers second, scoped Fable reviewer last.
-- If Cursor fails after the appropriate escalated retry, use a Codex subagent fallback when delegation still helps.
-
-Review correction loop:
-- Run one Codex subagent review first. If it finds material issues, delegate corrections, verify, and rerun the Codex review until it is green before moving on.
-- Then run multiple very scoped Composer `composer-2.5-fast` reviewers, preferably split by file, behavior surface, or risk axis. If any Composer reviewer finds material issues, delegate corrections, verify, and rerun the relevant Composer review set until all are green.
-- Last, run one scoped Fable `claude-fable-5-thinking-high` review. If Fable finds material issues, delegate corrections, verify, and rerun Fable until it is green.
-
-Fable is the final slow reviewer model. Scope its prompt tightly, run it only after Codex and Composer reviewers are green, expect it to take longer than implementer/explorer agents, and wait or poll for completion instead of treating a long run as a failure.
-
-GPT subagent means the Codex subagent/multi-agent tool in the app, not Cursor CLI with a GPT model. Never run `cursor-agent` or the cursor-agent wrapper with `gpt-*` models. If the Codex subagent tool or requested GPT model is unavailable, report that blocker instead of switching tools. Cursor is only for the Cursor models named here: `composer-2.5-fast` and `claude-fable-5-thinking-high`.
-
-## Cursor Commands
-
-- Wrapper: `/Users/martin.zahnd/.codex/bin/cursor-agent-codex`
-- Binary: `/opt/homebrew/bin/cursor-agent`
-- Flags: `-p --trust --model <model> --workspace <absolute-repo-path>`
-- Ask mode: `--mode ask` for read-only explorer/researcher/reviewer tasks
-- Plan mode: `--mode plan` for read-only plans
-- Edit mode: omit `--mode`; assign exact writable paths
-
-Despite its name, `cursor-agent-codex` is a Cursor CLI wrapper, not a Codex subagent. Use it only with the Cursor models named above.
-
-```sh
-/Users/martin.zahnd/.codex/bin/cursor-agent-codex -p --trust --model composer-2.5-fast --workspace <repo> --mode ask "<prompt>"
-/Users/martin.zahnd/.codex/bin/cursor-agent-codex -p --trust --model composer-2.5-fast --workspace <repo> --mode plan "<prompt>"
-/Users/martin.zahnd/.codex/bin/cursor-agent-codex -p --trust --model composer-2.5-fast --workspace <repo> "<prompt>"
-/Users/martin.zahnd/.codex/bin/cursor-agent-codex -p --trust --model claude-fable-5-thinking-high --workspace <repo> --mode ask "<review prompt>"
-```
-
-Do not run Cursor status/list-models/whoami as routine preflights. If Cursor hits `SecItemCopyMatching` or Keychain errors, retry with escalation. Never use `-f`, `--force`, or `--yolo`.
-
 ## Prompt Contract
 
 Every subagent prompt includes:
 
-- Role
 - Workspace
 - Task
 - Ownership: read-only or exact writable paths
 - Constraints: do not revert or overwrite others; follow `AGENTS.md`; stay in scope
 - Final output: summary, files changed, verification, blockers, risks
-
-Roles:
-
-- explorer: read-only code investigation with file/line evidence
-- researcher: read-only docs or external research with sources
-- implementer: scoped edits plus focused tests when behavior changes
-- test-runner: focused verification, first relevant failure, no edits unless assigned
-- reviewer: findings first; bugs, regressions, tests, data loss, API drift, concurrency
-- migration-agent: mechanical edits across a known file set
-- docs-agent: docs only; update `AGENTS.md` only for durable structure/command/convention changes
 
 ## Safety
 
