@@ -1,6 +1,6 @@
 ---
 name: cursor-orchestration
-description: Coordinates coding work with Cursor Grok implementation and staged Codex, Composer, and Fable reviews while keeping the parent context focused. Use when the user asks to orchestrate or delegate code work, mentions Cursor, Grok, GPT-5.6, Fable, Composer, subagents, context-window bloat, or wants stronger adherence to a delegated workflow.
+description: Coordinates multi-stage coding work with Composer exploration, Grok implementation and scoped review, Codex verification, and final Fable review while keeping the parent context focused. Use when the user asks to orchestrate or delegate, or when a task has multiple bounded workstreams, requires staged implementation and correction loops, or is broad enough to risk overloading one context.
 ---
 
 # Cursor Orchestration
