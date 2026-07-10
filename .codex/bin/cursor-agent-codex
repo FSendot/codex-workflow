@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+CURSOR_KEY_FILE="${CURSOR_API_KEY_FILE:-$CODEX_HOME/secrets/cursor_api_key}"
+
+if [ -n "${CURSOR_AGENT_BIN:-}" ]; then
+  cursor_agent="$CURSOR_AGENT_BIN"
+elif [ -x /opt/homebrew/bin/cursor-agent ]; then
+  cursor_agent=/opt/homebrew/bin/cursor-agent
+elif command -v cursor-agent >/dev/null 2>&1; then
+  cursor_agent="$(command -v cursor-agent)"
+else
+  printf 'cursor-agent not found; set CURSOR_AGENT_BIN or add it to PATH\n' >&2
+  exit 127
+fi
+
+if [ -n "${CURSOR_API_KEY:-}" ]; then
+  exec "$cursor_agent" --api-key "$CURSOR_API_KEY" "$@"
+fi
+
+if [ -r "$CURSOR_KEY_FILE" ]; then
+  key="$(sed -n '1p' "$CURSOR_KEY_FILE")"
+  if [ -n "$key" ]; then
+    exec "$cursor_agent" --api-key "$key" "$@"
+  fi
+fi
+
+exec "$cursor_agent" "$@"

@@ -1,26 +1,7 @@
-Check the nearest project `AGENTS.md` before feature or structure work. Use it for project rules. If it is absent after a reasonable local check, ask instead of guessing. Do not mention this check in chat.
+Before feature or structural work, follow the nearest project `AGENTS.md`. If none is found after a reasonable check, ask rather than inventing project rules. Do not mention this check.
 
-Prefer orchestration: plan locally, delegate bounded exploration or implementation, review outputs, integrate changes, run final verification. Do not launch unused agents; close them when done.
+For nontrivial tasks, plan, delegate bounded work when useful, inspect the results, integrate, and verify. Continue until complete or genuinely blocked; report the blocker and needed input. Scope subagent prompts with the workspace, task, writable paths, constraints, expected output, and verification. Do not let subagents overwrite unrelated work.
 
-## Persistence Loop
+Normal inspection and focused verification are allowed. Ask before dependency installs, network or cloud operations, database migrations, shared or production mutations, destructive filesystem or git operations, and force pushes.
 
-- Loop until the assigned task is complete: plan, delegate/act, observe results, adapt, continue.
-- A task is complete only when changes are integrated, expected verification ran or is explicitly blocked, review feedback is handled, and residual risks are named.
-- If a subagent returns partial work, fails, or finds new blockers, continue locally or re-delegate within scope.
-- Stop early only for user pause, approval/safety boundary, impossible requirement, or repeated no-progress blocker; report the exact blocker and next needed input.
-
-## Prompt Contract
-
-Every subagent prompt includes:
-
-- Workspace
-- Task
-- Ownership: read-only or exact writable paths
-- Constraints: do not revert or overwrite others; follow `AGENTS.md`; stay in scope
-- Final output: summary, files changed, verification, blockers, risks
-
-## Safety
-
-Normal inspection and focused project verification commands are allowed. Ask before dependency installs, network fetches, cloud commands, DB migrations, production/shared-environment mutations, destructive filesystem/git commands, or force pushes.
-
-After delegation: inspect output and changed files, check `git diff`, confirm boundaries, resolve conflicts, run focused tests/formatting, summarize files and verification, never commit your work, leave a commit message in the chat when done.
+Before finishing, inspect the diff, confirm scope, run relevant checks, report residual risks, and leave the working tree uncommitted unless the user asks. Include a proposed commit message.
