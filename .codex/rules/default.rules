@@ -1,13 +1,78 @@
 prefix_rule(pattern=["bunx", "-y", "react-doctor@latest", ".", "--verbose", "--diff"], decision="allow")
 prefix_rule(pattern=["bunx", "-y", "react-doctor@latest", "--help"], decision="allow")
-prefix_rule(pattern=["/Users/martin.zahnd/.codex/bin/cursor-agent-codex", "-p", "--trust", "--model", "composer-2.5-fast"], decision="allow")
-prefix_rule(pattern=["/Users/martin.zahnd/.codex/bin/cursor-agent-codex", "-p", "--trust", "--model", "claude-fable-5-thinking-high"], decision="allow")
-prefix_rule(pattern=["/Users/martin.zahnd/.codex/bin/cursor-agent-codex", "-p", "--trust", "--model", "grok-4.5-fast-xhigh"], decision="allow")
-prefix_rule(pattern=["/opt/homebrew/bin/cursor-agent", "-p", "--trust", "--model", "composer-2.5-fast"], decision="allow")
-prefix_rule(pattern=["/opt/homebrew/bin/cursor-agent", "-p", "--trust", "--model", "claude-fable-5-thinking-high"], decision="allow")
-prefix_rule(pattern=["/opt/homebrew/bin/cursor-agent", "-p", "--trust", "--model", "grok-4.5-fast-xhigh"], decision="allow")
-prefix_rule(pattern=["cursor-agent", "-p", "--trust", "--model", "composer-2.5-fast"], decision="allow")
-prefix_rule(pattern=["cursor-agent", "-p", "--trust", "--model", "claude-fable-5-thinking-high"], decision="allow")
-prefix_rule(pattern=["cursor-agent", "-p", "--trust", "--model", "grok-4.5-fast-xhigh"], decision="allow")
+prefix_rule(
+    pattern=["cursor-agent", "-p", "--trust", "--mode", "plan", "--model", ["composer-2.5-fast", "cursor-grok-4.5-high-fast"]],
+    decision="allow",
+    justification="Allow read-only Cursor planning, exploration, and review lanes",
+    match=[
+        "cursor-agent -p --trust --mode plan --model composer-2.5-fast --workspace /repo --output-format text inspect",
+        "cursor-agent -p --trust --mode plan --model cursor-grok-4.5-high-fast --workspace /repo review",
+    ],
+    not_match=[
+        "cursor-agent -p --trust --model cursor-grok-4.5-high --workspace /repo edit",
+    ],
+)
+prefix_rule(
+    pattern=["cursor-agent", "-p", "--trust", "--mode", "plan", "--model", "claude-fable-5-thinking-high"],
+    decision="forbidden",
+    justification="Use Claude Code model fable for Fable planning and review",
+    match=[
+        "cursor-agent -p --trust --mode plan --model claude-fable-5-thinking-high --workspace /repo plan",
+    ],
+)
+prefix_rule(
+    pattern=["cursor-agent", "-p", "--trust", "--mode", "plan", "--model", ["gpt-5.6-sol-high", "gpt-5.6-sol-high-fast", "gpt-5.6-sol-xhigh", "gpt-5.6-sol-xhigh-fast"]],
+    decision="forbidden",
+    justification="Use a direct Codex subagent or Codex CLI for GPT models",
+    match=[
+        "cursor-agent -p --trust --mode plan --model gpt-5.6-sol-high --workspace /repo review",
+    ],
+)
+prefix_rule(
+    pattern=["cursor-agent", "-p", "--trust", "--sandbox", "enabled", "--model", ["claude-fable-5-thinking-high", "gpt-5.6-sol-high", "gpt-5.6-sol-high-fast", "gpt-5.6-sol-xhigh", "gpt-5.6-sol-xhigh-fast"]],
+    decision="forbidden",
+    justification="Use Claude Code for Fable and Codex for GPT models",
+    match=[
+        "cursor-agent -p --trust --sandbox enabled --model claude-fable-5-thinking-high --workspace /repo edit",
+        "cursor-agent -p --trust --sandbox enabled --model gpt-5.6-sol-high --workspace /repo edit",
+    ],
+)
+prefix_rule(
+    pattern=["cursor-agent", "-p", "--trust", "--sandbox", "enabled", "--model", "cursor-grok-4.5-high"],
+    decision="allow",
+    justification="Allow writable Grok lanes inside the Cursor sandbox",
+    match=[
+        "cursor-agent -p --trust --sandbox enabled --model cursor-grok-4.5-high --workspace /repo implement",
+    ],
+    not_match=[
+        "cursor-agent -p --trust --model cursor-grok-4.5-high --workspace /repo implement",
+        "cursor-agent -p --trust --force --model cursor-grok-4.5-high --workspace /repo implement",
+    ],
+)
+prefix_rule(
+    pattern=["claude", "-p", "--model", ["haiku", "sonnet", "fable"], "--effort", ["low", "medium", "high"], "--permission-mode", "plan", "--tools", "Read,Grep,Glob,Skill,Bash", "--disallowedTools", "Agent,Bash(claude *),Bash(cursor-agent *),Bash(codex *)", "--no-session-persistence", "--output-format", "json"],
+    decision="allow",
+    justification="Allow read-only Claude lanes to load repo skills and run read-only skill scripts",
+    match=[
+        "claude -p --model haiku --effort low --permission-mode plan --tools Read,Grep,Glob,Skill,Bash --disallowedTools 'Agent,Bash(claude *),Bash(cursor-agent *),Bash(codex *)' --no-session-persistence --output-format json inspect",
+    ],
+    not_match=[
+        "claude -p --model haiku --effort low --permission-mode dontAsk --tools Read,Edit --allowedTools Read,Edit edit",
+        "claude -p --model haiku --effort low --permission-mode plan --tools Read,Grep,Glob --disallowedTools Agent --disable-slash-commands inspect",
+    ],
+)
+prefix_rule(
+    pattern=["codex", "-a", "never", "exec", "-m", ["gpt-5.6-luna", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex-spark"], "-s", ["read-only", "workspace-write"], "--ephemeral", "-C"],
+    decision="allow",
+    justification="Allow ephemeral nested Codex lanes with an explicit inner sandbox",
+    match=[
+        "codex -a never exec -m gpt-5.4-mini -s read-only --ephemeral -C /repo review",
+        "codex -a never exec -m gpt-5.4 -s workspace-write --ephemeral -C /repo implement",
+    ],
+    not_match=[
+        "codex -a never exec -m gpt-5.6-sol -s workspace-write --ephemeral -C /repo implement",
+        "codex --dangerously-bypass-approvals-and-sandbox exec -m gpt-5.4 implement",
+    ],
+)
 prefix_rule(pattern=["aws", "logs"], decision="allow")
 prefix_rule(pattern=["aws", "cloudwatch"], decision="allow")

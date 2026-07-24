@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fable-Planned Orchestration"
+  short_description: "Plan and gate complex multi-agent coding work"
+  default_prompt: "Use $fable-planned-orchestration to plan roles and orchestrate this complex coding task."

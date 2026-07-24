@@ -16,7 +16,7 @@ Use the parent agent's judgment to choose useful delegation boundaries. Keep mat
 - Use a Codex subagent (not Cursor with a GPT model) for the first review gate.
 - Use Cursor model `grok-4.5-fast-xhigh` for the scoped intermediate review gate.
 - Use Cursor model `claude-fable-5-thinking-high` for the final review gate.
-- Treat `cursor-agent-codex` as Cursor CLI.
+- Invoke `cursor-agent` directly as Cursor CLI.
 - If a required model or Codex subagent is unavailable, stop and report the blocker rather than silently substituting another model.
 
 ## Workflow
