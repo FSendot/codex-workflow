@@ -1,0 +1,182 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    printf '%s\n' \
+        "Usage: run-lane <lane> --workspace <repository> [--prompt-file <file>]" \
+        "" \
+        "Lanes:" \
+        "  preflight       Check required CLIs without running an agent" \
+        "  fable-plan     Plan the orchestration with Fable" \
+        "  composer-read  Explore with Cursor Composer" \
+        "  grok-read      Research or review with Cursor Grok" \
+        "  opus-write     Implement with Claude Opus" \
+        "  opus-correct   Correct findings with Claude Opus" \
+        "  opus-review    Run a narrow intermediate review with Claude Opus" \
+        "  codex-review   Run the Codex review fallback" \
+        "  fable-final    Review the complete diff with Fable"
+}
+
+die() {
+    printf 'run-lane: %s\n' "$*" >&2
+    exit 2
+}
+
+canonical_dir() {
+    CDPATH= cd -- "$1" 2>/dev/null && pwd -P
+}
+
+canonical_file() {
+    file_dir=$(dirname -- "$1")
+    file_name=$(basename -- "$1")
+    canonical_file_dir=$(canonical_dir "$file_dir") || return 1
+    printf '%s/%s\n' "$canonical_file_dir" "$file_name"
+}
+
+require_command() {
+    command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+print_command() {
+    printf 'cwd=%s\n' "$workspace"
+    for token do
+        printf 'argv=%s\n' "$token"
+    done
+}
+
+[ "$#" -ge 1 ] || {
+    usage >&2
+    exit 2
+}
+
+lane=$1
+shift
+workspace_arg=
+prompt_arg=
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --workspace)
+            [ "$#" -ge 2 ] || die "missing value for --workspace"
+            [ -z "$workspace_arg" ] || die "--workspace may be supplied only once"
+            workspace_arg=$2
+            shift 2
+            ;;
+        --prompt-file)
+            [ "$#" -ge 2 ] || die "missing value for --prompt-file"
+            [ -z "$prompt_arg" ] || die "--prompt-file may be supplied only once"
+            prompt_arg=$2
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            die "unsupported argument: $1"
+            ;;
+    esac
+done
+
+[ -n "$workspace_arg" ] || die "--workspace is required"
+workspace=$(canonical_dir "$workspace_arg") || die "workspace is not a readable directory: $workspace_arg"
+git_root=$(git -C "$workspace" rev-parse --show-toplevel 2>/dev/null) ||
+    die "workspace is not inside a Git repository: $workspace"
+git_root=$(canonical_dir "$git_root") || die "cannot canonicalize Git root: $git_root"
+[ "$workspace" = "$git_root" ] || die "workspace must be the repository root: $git_root"
+
+case "$lane" in
+    preflight)
+        [ -z "$prompt_arg" ] || die "preflight does not accept --prompt-file"
+        require_command cursor-agent
+        require_command claude
+        require_command codex
+        cursor-agent --version
+        claude --version
+        codex --version
+        exit 0
+        ;;
+    fable-plan|composer-read|grok-read|opus-write|opus-correct|opus-review|codex-review|fable-final)
+        ;;
+    *)
+        die "unknown lane: $lane"
+        ;;
+esac
+
+[ -n "$prompt_arg" ] || die "--prompt-file is required for lane $lane"
+[ -f "$prompt_arg" ] || die "prompt is not a regular file: $prompt_arg"
+[ ! -L "$prompt_arg" ] || die "prompt file may not be a symbolic link: $prompt_arg"
+prompt_file=$(canonical_file "$prompt_arg") || die "cannot canonicalize prompt file: $prompt_arg"
+case "$prompt_file" in
+    "$workspace"/*) ;;
+    *) die "prompt file must be inside the workspace: $workspace" ;;
+esac
+prompt=$(sed -n '1,$p' "$prompt_file")
+[ -n "$prompt" ] || die "prompt file is empty: $prompt_file"
+prompt="$prompt
+
+Work directly in this lane. Do not launch subagents, use an Agent or Task tool, or invoke claude, cursor-agent, or codex through Bash. Use the repository's applicable instructions, skills, and scripts within the ownership and permission boundary stated above."
+
+no_nesting="Agent,Bash(claude *),Bash(cursor-agent *),Bash(codex *)"
+
+case "$lane" in
+    fable-plan|fable-final)
+        require_command claude
+        set -- claude -p \
+            --model claude-fable-5 \
+            --effort high \
+            --permission-mode plan \
+            --tools Read,Grep,Glob,Skill,Bash \
+            --disallowedTools "$no_nesting" \
+            --no-session-persistence \
+            --output-format json \
+            "$prompt"
+        ;;
+    composer-read)
+        require_command cursor-agent
+        set -- cursor-agent -p --trust --mode plan \
+            --model composer-2.5-fast \
+            --workspace "$workspace" \
+            --output-format text \
+            "$prompt"
+        ;;
+    grok-read)
+        require_command cursor-agent
+        set -- cursor-agent -p --trust --mode plan \
+            --model cursor-grok-4.5-high-fast \
+            --workspace "$workspace" \
+            --output-format text \
+            "$prompt"
+        ;;
+    opus-write|opus-correct|opus-review)
+        require_command claude
+        opus_tools="Read,Grep,Glob,Skill,Edit,Write,Bash"
+        set -- claude -p \
+            --model claude-opus-5 \
+            --effort high \
+            --permission-mode dontAsk \
+            --tools "$opus_tools" \
+            --allowedTools "$opus_tools" \
+            --disallowedTools "$no_nesting" \
+            --no-session-persistence \
+            --output-format json \
+            "$prompt"
+        ;;
+    codex-review)
+        require_command codex
+        set -- codex -a never exec \
+            -m gpt-5.6-sol \
+            -s read-only \
+            --ephemeral \
+            -C "$workspace" \
+            "$prompt"
+        ;;
+esac
+
+if [ "${FABLE_ORCHESTRATION_DRY_RUN:-}" = 1 ]; then
+    print_command "$@"
+    exit 0
+fi
+
+cd "$workspace"
+exec "$@"

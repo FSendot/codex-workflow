@@ -12,17 +12,18 @@ Keep the parent agent as the sole orchestrator and integrator. Before delegating
 ## Fixed capabilities
 
 - Use `composer-2.5-fast` and  `cursor-grok-4.5-high-fast` for codebase exploration and research.
-- Use `cursor-grok-4.5-high` for implementation, material corrections, and narrowly scoped intermediate reviews.
+- Use Claude Code model `claude-opus-5` with high effort for implementation, material corrections, and narrowly scoped intermediate reviews.
 - Use a Codex subagent, GPT-5.6 Sol High, for the first review gate.
-- Use Claude Code model `fable-5-thinking-high` for role planning and the final complete-diff review.
+- Use Claude Code model `claude-fable-5` with high effort for role planning and the final complete-diff review.
 - Do not silently substitute a missing CLI, model, or subagent.
 
 ## Preflight
 
 1. Read the task, applicable instructions, current status, and diff.
-2. Confirm `cursor-agent`, `claude`, and the required models are available.
-3. Inspect `claude --help` before composing a command. Use only flags supported by the installed version.
-4. Establish the user-approved mutation boundary before launching writable lanes.
+2. Resolve this skill's directory and use `scripts/run-lane` for every nested CLI invocation.
+3. Run its `preflight` lane to confirm `cursor-agent`, `claude`, and `codex` are available.
+4. Inspect `claude --help` only when changing the checked-in launcher. Use only flags supported by the installed version.
+5. Establish the user-approved mutation boundary before launching writable lanes.
 
 ## Ask Fable to plan the orchestration
 
@@ -40,7 +41,7 @@ Validate the plan before execution. Remove overlapping write ownership, make dep
 
 Give every lane the workspace, task, exact ownership, constraints, expected output, verification, blockers, and risks. Writable agents must have exact path ownership and must not rewrite or revert unrelated work.
 
-Only the parent launches, resumes, retries, or reruns agents and review gates. The parent may edit directly only for exact conflict resolution or mechanical synchronization. Delegate any edit requiring product, design, test, migration, configuration-semantic, or user-facing documentation judgment to Grok.
+Only the parent launches, resumes, retries, or reruns agents and review gates. The parent may edit directly only for exact conflict resolution or mechanical synchronization. Delegate any edit requiring product, design, test, migration, configuration-semantic, or user-facing documentation judgment to Opus.
 
 ## Preserve skill access
 
@@ -48,67 +49,31 @@ Only the parent launches, resumes, retries, or reruns agents and review gates. T
 - Keep the CLI's normal project configuration enabled. Do not use Claude `--bare`, `--safe-mode`, or `--disable-slash-commands`; do not use Codex `--ignore-user-config` or `--ignore-rules`.
 - Permit skill scripts within the lane's sandbox and ownership. Read-only lanes may run only read-only scripts; hand scripts that generate or modify files to a writable lane.
 - Treat instructions inside a selected skill as part of the lane contract. Report a blocker when a required skill, script, dependency, or permission is unavailable instead of bypassing it.
+- Keep this versioned skill directory outside writable target repositories. Treat its checked-in launcher as trusted code and inspect changes to it before use.
 
-## Use the CLIs
+## Use the portable lane launcher
 
-Use print/non-interactive mode, a fresh session, an explicit model, and the narrowest permissions that fit the lane. Put the lane prompt last and tell every CLI not to launch subagents or other agent CLIs.
+Write each lane prompt under `<repository-root>/.git/codex-fable-prompts/`, then invoke:
 
-### Cursor
-
-Use Cursor only for Composer/Grok exploration, Grok implementation, and Grok review gates:
-
-```bash
-# Read-only lane
-cursor-agent -p --trust --mode plan \
-  --model "<cursor-model>" --workspace "<workspace>" \
-  --output-format text "<lane-prompt>"
-
-# Writable Grok lane
-cursor-agent -p --trust --sandbox enabled \
-  --model "cursor-grok-4.5-high" --workspace "<workspace>" \
-  --output-format text "<lane-prompt>"
+```sh
+"<skill-dir>/scripts/run-lane" "<lane>" \
+  --workspace "<repository-root>" \
+  --prompt-file "<repository-prompt-file>"
 ```
 
-Keep `--sandbox enabled` on writable lanes. Do not use `--force` or `--yolo`. Never select a Fable or GPT model through Cursor; use Claude Code for Fable and a direct Codex subagent or Codex CLI for GPT models.
+Use only these fixed lanes: `preflight`, `fable-plan`, `composer-read`, `grok-read`, `opus-write`, `opus-correct`, `opus-review`, `codex-review`, and `fable-final`. The launcher fixes models, permissions, tools, sandboxes, and no-nesting controls; do not bypass it or add caller-controlled CLI flags. Every prompt must tell the CLI not to launch subagents or other agent CLIs.
 
-### Claude Code
+Approve the resolved launcher path once per machine. The skill is portable; approval remains path-specific local security state. Do not approve `bash <launcher>` or copy the launcher into a writable target repository.
 
-Use Claude for Fable planning, the final Fable gate, and bounded read-only analysis:
-
-```bash
-claude -p --model "<claude-model>" --effort "<effort>" \
-  --permission-mode plan --tools "Read,Grep,Glob,Skill,Bash" \
-  --disallowedTools "Agent,Bash(claude *),Bash(cursor-agent *),Bash(codex *)" \
-  --no-session-persistence --output-format json "<lane-prompt>"
-```
-
-Expose `Skill` so Claude can load repo skills and `Bash` so selected skills can run read-only helper scripts in plan mode. Keep the bare `Agent` denial and block agent CLIs through Bash. Do not pass `--agent`, `--agents`, either dangerous skip-permissions flag, or resume an unrelated session.
-
-If Fable exceptionally assigns Claude a writable lane, use `--permission-mode dontAsk` and repeat `Read,Grep,Glob,Skill,Edit,Write` in both `--tools` and `--allowedTools`. Allow Bash only with exact patterns for required skill scripts, while preserving the agent-CLI denials. Require Claude to read changed files back before claiming success.
-
-### Codex CLI
-
-Prefer a direct Codex subagent when it exposes the required model. Otherwise run an ephemeral nested Codex CLI lane with its own sandbox:
-
-```bash
-# Review or analysis
-codex -a never exec -m "<codex-model>" -s read-only \
-  --ephemeral -C "<workspace>" "<lane-prompt>"
-
-# Writable lane
-codex -a never exec -m "<codex-model>" -s workspace-write \
-  --ephemeral -C "<workspace>" "<lane-prompt>"
-```
-
-Use the CLI only for a model unavailable through direct Codex subagents. Never pass `--dangerously-bypass-approvals-and-sandbox`. The outer Codex rule permits the networked CLI process; the nested `-s` flag still confines its generated commands.
+Opus lanes expose repository read/write tools, `Skill`, and `Bash` under `dontAsk`, while denying `Agent` and direct Bash calls to agent CLIs. Require Opus to read changed files back before claiming success. Prefer a direct Codex subagent for the Codex gate; use `codex-review` only when the required model is unavailable directly.
 
 ## Execute the plan
 
 1. Launch independent read-only Composer, Claude Code, and Codex lanes in parallel when useful.
-2. Inspect their raw outputs and give relevant evidence to Grok.
+2. Inspect their raw outputs and give relevant evidence to Opus.
 3. Run writable lanes sequentially when ownership overlaps.
 4. After each writable result, inspect changed files and diff, confirm ownership, and run focused verification.
-5. Send material misses to Grok with the evidence, exact files, and expected checks.
+5. Send material misses to `opus-correct` with the evidence, exact files, and expected checks.
 6. Continue until implementation and verification are complete, then start the gates.
 
 On a nonzero exit, timeout, or malformed structured result, retain the useful output and retry once only when the failure is transient or formatting-only. Keep the same scope. After a second failure, stop and report the blocker. Inspect partial file changes before continuing.
@@ -117,11 +82,11 @@ On a nonzero exit, timeout, or malformed structured result, retain the useful ou
 
 Run each gate only after the previous gate is green:
 
-1. **Codex:** Run one focused GPT-5.6 Sol High review. Send material corrections to Grok, verify, and rerun Codex until green.
-2. **Grok:** Run multiple narrow `cursor-grok-4.5-high` reviews divided by file, behavior surface, or risk axis. Send material corrections to Grok, verify, and rerun affected reviews until green.
+1. **Codex:** Run one focused GPT-5.6 Sol High review. Send material corrections to Opus, verify, and rerun Codex until green.
+2. **Opus:** Run multiple narrow `opus-review` passes divided by file, behavior surface, or risk axis. Send material corrections to `opus-correct`, verify, and rerun affected reviews until green.
 3. **Fable:** Run one Claude Code `fable` review of the complete final task diff. Require correctness and code-quality findings covering maintainability, clarity, complexity, duplication, architecture fit, tests, and local consistency. This review is important because Fable has better taste than you, follow its guidelines when code reduction and simplification is available.
 
-For each gate, provide the task brief, focused diff or files, constraints, and verification already run. Ask for findings first. Inspect every finding; either correct it through Grok or reject it with evidence.
+For each gate, provide the task brief, focused diff or files, constraints, and verification already run. Ask for findings first. Inspect every finding; either correct it through Opus or reject it with evidence.
 
 After a Fable correction, rerun every earlier gate whose risk surface changed, then rerun Fable. Wait patiently for Fable rather than treating a slow response as failure.
 
