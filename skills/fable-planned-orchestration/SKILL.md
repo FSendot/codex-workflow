@@ -53,7 +53,13 @@ Only the parent launches, resumes, retries, or reruns agents and review gates. T
 
 ## Use the portable lane launcher
 
-Write each lane prompt under `<repository-root>/.git/codex-fable-prompts/`, then invoke:
+Resolve the worktree-specific prompt directory, create it when absent, and write each lane prompt inside it:
+
+```sh
+git -C "<repository-root>" rev-parse --git-path codex-fable-prompts
+```
+
+Do not construct this path as `<repository-root>/.git/...`: `.git` is a file in a linked worktree. Then invoke:
 
 ```sh
 "<skill-dir>/scripts/run-lane" "<lane>" \
@@ -65,7 +71,7 @@ Use only these fixed lanes: `preflight`, `fable-plan`, `composer-read`, `grok-re
 
 Approve the resolved launcher path once per machine. The skill is portable; approval remains path-specific local security state. Do not approve `bash <launcher>` or copy the launcher into a writable target repository.
 
-Opus lanes expose repository read/write tools, `Skill`, and `Bash` under `dontAsk`, while denying `Agent` and direct Bash calls to agent CLIs. Require Opus to read changed files back before claiming success. Prefer a direct Codex subagent for the Codex gate; use `codex-review` only when the required model is unavailable directly.
+`opus-write` and `opus-correct` expose repository read/write tools, `Skill`, and `Bash` under `dontAsk`. `opus-review` runs in plan mode without `Edit` or `Write`. All Opus lanes deny `Agent` and direct Bash calls to agent CLIs. Require writable Opus lanes to read changed files back before claiming success. Prefer a direct Codex subagent for the Codex gate; use `codex-review` only when the required model is unavailable directly.
 
 ## Execute the plan
 

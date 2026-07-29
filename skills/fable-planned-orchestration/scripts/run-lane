@@ -84,6 +84,12 @@ git_root=$(git -C "$workspace" rev-parse --show-toplevel 2>/dev/null) ||
     die "workspace is not inside a Git repository: $workspace"
 git_root=$(canonical_dir "$git_root") || die "cannot canonicalize Git root: $git_root"
 [ "$workspace" = "$git_root" ] || die "workspace must be the repository root: $git_root"
+git_prompt_path=$(git -C "$workspace" rev-parse --git-path codex-fable-prompts 2>/dev/null) ||
+    die "cannot resolve Git prompt directory for workspace: $workspace"
+case "$git_prompt_path" in
+    /*) ;;
+    *) git_prompt_path=$workspace/$git_prompt_path ;;
+esac
 
 case "$lane" in
     preflight)
@@ -107,9 +113,11 @@ esac
 [ -f "$prompt_arg" ] || die "prompt is not a regular file: $prompt_arg"
 [ ! -L "$prompt_arg" ] || die "prompt file may not be a symbolic link: $prompt_arg"
 prompt_file=$(canonical_file "$prompt_arg") || die "cannot canonicalize prompt file: $prompt_arg"
+git_prompt_dir=$(canonical_dir "$git_prompt_path") ||
+    die "Git prompt directory does not exist: $git_prompt_path"
 case "$prompt_file" in
-    "$workspace"/*) ;;
-    *) die "prompt file must be inside the workspace: $workspace" ;;
+    "$git_prompt_dir"/*) ;;
+    *) die "prompt file must be inside the Git prompt directory: $git_prompt_dir" ;;
 esac
 prompt=$(sed -n '1,$p' "$prompt_file")
 [ -n "$prompt" ] || die "prompt file is empty: $prompt_file"
@@ -148,7 +156,7 @@ case "$lane" in
             --output-format text \
             "$prompt"
         ;;
-    opus-write|opus-correct|opus-review)
+    opus-write|opus-correct)
         require_command claude
         opus_tools="Read,Grep,Glob,Skill,Edit,Write,Bash"
         set -- claude -p \
@@ -157,6 +165,18 @@ case "$lane" in
             --permission-mode dontAsk \
             --tools "$opus_tools" \
             --allowedTools "$opus_tools" \
+            --disallowedTools "$no_nesting" \
+            --no-session-persistence \
+            --output-format json \
+            "$prompt"
+        ;;
+    opus-review)
+        require_command claude
+        set -- claude -p \
+            --model claude-opus-5 \
+            --effort high \
+            --permission-mode plan \
+            --tools Read,Grep,Glob,Skill,Bash \
             --disallowedTools "$no_nesting" \
             --no-session-persistence \
             --output-format json \
