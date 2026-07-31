@@ -157,7 +157,9 @@ case "$lane" in
             --tools Read,Grep,Glob,Skill,Bash,Agent \
             --disallowedTools "$no_agent_clis" \
             --no-session-persistence \
-            --output-format json \
+            --output-format stream-json \
+            --include-partial-messages \
+            --verbose \
             "$prompt"
         ;;
     luna-read)

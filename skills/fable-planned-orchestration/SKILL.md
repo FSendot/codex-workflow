@@ -71,7 +71,7 @@ Use only these fixed lanes: `preflight`, `fable-plan`, `luna-read`, `terra-read`
 
 Approve the resolved launcher path once per machine. The skill is portable; approval remains path-specific local security state. Do not approve `bash <launcher>` or copy the launcher into a writable target repository.
 
-`opus-write` and `opus-correct` expose repository read/write tools, `Skill`, and `Bash` under `dontAsk`. `opus-review` runs in plan mode without `Edit` or `Write`. All Opus lanes deny `Agent` and direct Bash calls to agent CLIs. `fable-final` runs in plan mode with `Agent` enabled so Fable may delegate bounded read-only review slices; its subagents must not edit, launch further agents, or invoke agent CLIs. Require writable Opus lanes to read changed files back before claiming success. Prefer a direct Codex subagent for the Codex gate; use `codex-review` only when the required model is unavailable directly.
+`opus-write` and `opus-correct` expose repository read/write tools, `Skill`, and `Bash` under `dontAsk`. `opus-review` runs in plan mode without `Edit` or `Write`. All Opus lanes deny `Agent` and direct Bash calls to agent CLIs. `fable-final` runs in plan mode with `Agent` enabled so Fable may delegate bounded read-only review slices; its subagents must not edit, launch further agents, or invoke agent CLIs. Its launcher emits verbose `stream-json` with partial messages. Consume that JSONL incrementally, surface useful review insights while Fable works, and retain the final result for finding adjudication. Require writable Opus lanes to read changed files back before claiming success. Prefer a direct Codex subagent for the Codex gate; use `codex-review` only when the required model is unavailable directly.
 
 ## Execute the plan
 
@@ -90,7 +90,7 @@ Run the earlier gates concurrently, then run Fable last:
 
 1. **Parallel earlier gates:** Launch one focused GPT-5.6 Sol High Codex review and all independent narrow `opus-review` passes at the same time. Divide Opus reviews by file, behavior surface, or risk axis.
 2. **Earlier-gate correction loop:** Inspect every finding after all parallel reviews finish. Send material corrections to `opus-correct`, verify them, and rerun every earlier review whose risk surface changed. Do not start Fable until Codex and all Opus reviews are green on the same diff.
-3. **Fable last:** Run one `fable-final` review of the complete final task diff. Permit Fable to launch bounded read-only subagents for independent coverage. Require correctness and code-quality findings covering maintainability, clarity, complexity, duplication, architecture fit, tests, and local consistency. This review is important because Fable has better taste than you; follow its guidance when code reduction and simplification is available.
+3. **Fable last:** Run one `fable-final` review of the complete final task diff. Stream its partial output as it arrives and surface useful review insights during the run. Permit Fable to launch bounded read-only subagents for independent coverage. Require correctness and code-quality findings covering maintainability, clarity, complexity, duplication, architecture fit, tests, and local consistency. This review is important because Fable has better taste than you; follow its guidance when code reduction and simplification is available.
 
 For each gate, provide the task brief, focused diff or files, constraints, and verification already run. Ask for findings first. Inspect every finding; either correct it through Opus or reject it with evidence.
 
