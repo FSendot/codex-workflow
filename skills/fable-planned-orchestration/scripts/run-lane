@@ -8,8 +8,8 @@ usage() {
         "Lanes:" \
         "  preflight       Check required CLIs without running an agent" \
         "  fable-plan     Plan the orchestration with Fable" \
-        "  composer-read  Explore with Cursor Composer" \
-        "  grok-read      Research or review with Cursor Grok" \
+        "  luna-read      Run fast broad exploration with Codex Luna" \
+        "  terra-read     Run deeper research with Codex Terra" \
         "  opus-write     Implement with Claude Opus" \
         "  opus-correct   Correct findings with Claude Opus" \
         "  opus-review    Run a narrow intermediate review with Claude Opus" \
@@ -94,15 +94,13 @@ esac
 case "$lane" in
     preflight)
         [ -z "$prompt_arg" ] || die "preflight does not accept --prompt-file"
-        require_command cursor-agent
         require_command claude
         require_command codex
-        cursor-agent --version
         claude --version
         codex --version
         exit 0
         ;;
-    fable-plan|composer-read|grok-read|opus-write|opus-correct|opus-review|codex-review|fable-final)
+    fable-plan|luna-read|terra-read|opus-write|opus-correct|opus-review|codex-review|fable-final)
         ;;
     *)
         die "unknown lane: $lane"
@@ -121,19 +119,19 @@ case "$prompt_file" in
 esac
 prompt=$(sed -n '1,$p' "$prompt_file")
 [ -n "$prompt" ] || die "prompt file is empty: $prompt_file"
-no_agent_clis="Bash(claude *),Bash(cursor-agent *),Bash(codex *)"
+no_agent_clis="Bash(claude *),Bash(codex *)"
 no_nesting="Agent,$no_agent_clis"
 
 case "$lane" in
     fable-final)
         prompt="$prompt
 
-Work directly in this read-only final review lane. You may use the Agent tool to launch bounded read-only subagents for independent review coverage. Tell every subagent not to launch further agents or agent CLIs. Do not invoke claude, cursor-agent, or codex through Bash. Use the repository's applicable instructions, skills, and scripts."
+Work directly in this read-only final review lane. You may use the Agent tool to launch bounded read-only subagents for independent review coverage. Tell every subagent not to launch further agents or agent CLIs. Do not invoke claude or codex through Bash. Use the repository's applicable instructions, skills, and scripts."
         ;;
     *)
         prompt="$prompt
 
-Work directly in this lane. Do not launch subagents, use an Agent or Task tool, or invoke claude, cursor-agent, or codex through Bash. Use the repository's applicable instructions, skills, and scripts within the ownership and permission boundary stated above."
+Work directly in this lane. Do not launch subagents, use an Agent or Task tool, or invoke claude or codex through Bash. Use the repository's applicable instructions, skills, and scripts within the ownership and permission boundary stated above."
         ;;
 esac
 
@@ -162,20 +160,22 @@ case "$lane" in
             --output-format json \
             "$prompt"
         ;;
-    composer-read)
-        require_command cursor-agent
-        set -- cursor-agent -p --trust --mode plan \
-            --model composer-2.5-fast \
-            --workspace "$workspace" \
-            --output-format text \
+    luna-read)
+        require_command codex
+        set -- codex -a never exec \
+            -m gpt-5.6-luna \
+            -s read-only \
+            --ephemeral \
+            -C "$workspace" \
             "$prompt"
         ;;
-    grok-read)
-        require_command cursor-agent
-        set -- cursor-agent -p --trust --mode plan \
-            --model cursor-grok-4.5-high-fast \
-            --workspace "$workspace" \
-            --output-format text \
+    terra-read)
+        require_command codex
+        set -- codex -a never exec \
+            -m gpt-5.6-terra \
+            -s read-only \
+            --ephemeral \
+            -C "$workspace" \
             "$prompt"
         ;;
     opus-write|opus-correct)

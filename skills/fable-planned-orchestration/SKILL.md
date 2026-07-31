@@ -7,11 +7,11 @@ description: Orchestrates complex coding work through a Fable-authored plan. Use
 
 ## Intent
 
-Keep the parent agent as the sole orchestrator and integrator. Before delegating task work, ask Cursor Fable to design the plan.
+Keep the parent agent as the sole orchestrator and integrator. Before delegating task work, ask Claude Code Fable to design the plan.
 
 ## Fixed capabilities
 
-- Use `composer-2.5-fast` and  `cursor-grok-4.5-high-fast` for codebase exploration and research.
+- Use Codex `gpt-5.6-luna` for fast broad codebase discovery and `gpt-5.6-terra` for deeper behavioral tracing and research.
 - Use Claude Code model `claude-opus-5` with high effort for implementation, material corrections, and narrowly scoped intermediate reviews.
 - Use a Codex subagent, GPT-5.6 Sol High, for the first review gate.
 - Use Claude Code model `claude-fable-5` with high effort for role planning and the final complete-diff review.
@@ -21,7 +21,7 @@ Keep the parent agent as the sole orchestrator and integrator. Before delegating
 
 1. Read the task, applicable instructions, current status, and diff.
 2. Resolve this skill's directory and use `scripts/run-lane` for every nested CLI invocation.
-3. Run its `preflight` lane to confirm `cursor-agent`, `claude`, and `codex` are available.
+3. Run its `preflight` lane to confirm `claude` and `codex` are available.
 4. Inspect `claude --help` only when changing the checked-in launcher. Use only flags supported by the installed version.
 5. Establish the user-approved mutation boundary before launching writable lanes.
 
@@ -67,7 +67,7 @@ Do not construct this path as `<repository-root>/.git/...`: `.git` is a file in 
   --prompt-file "<repository-prompt-file>"
 ```
 
-Use only these fixed lanes: `preflight`, `fable-plan`, `composer-read`, `grok-read`, `opus-write`, `opus-correct`, `opus-review`, `codex-review`, and `fable-final`. The launcher fixes models, permissions, tools, sandboxes, and nesting controls; do not bypass it or add caller-controlled CLI flags. Deny subagents in every lane except `fable-final`, and deny nested agent CLI calls in every lane.
+Use only these fixed lanes: `preflight`, `fable-plan`, `luna-read`, `terra-read`, `opus-write`, `opus-correct`, `opus-review`, `codex-review`, and `fable-final`. The launcher fixes models, permissions, tools, sandboxes, and nesting controls; do not bypass it or add caller-controlled CLI flags. Deny subagents in every lane except `fable-final`, and deny nested agent CLI calls in every lane.
 
 Approve the resolved launcher path once per machine. The skill is portable; approval remains path-specific local security state. Do not approve `bash <launcher>` or copy the launcher into a writable target repository.
 
@@ -75,7 +75,7 @@ Approve the resolved launcher path once per machine. The skill is portable; appr
 
 ## Execute the plan
 
-1. Launch independent read-only Composer, Claude Code, and Codex lanes in parallel when useful.
+1. Launch independent read-only Luna, Terra, Claude Code, and Codex lanes in parallel when useful. Use Luna for broad discovery and Terra for deeper traces; avoid duplicating their scopes.
 2. Inspect their raw outputs and give relevant evidence to Opus.
 3. Run writable lanes sequentially when ownership overlaps.
 4. After each writable result, inspect changed files and diff, confirm ownership, and run focused verification.
