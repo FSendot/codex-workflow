@@ -121,14 +121,24 @@ case "$prompt_file" in
 esac
 prompt=$(sed -n '1,$p' "$prompt_file")
 [ -n "$prompt" ] || die "prompt file is empty: $prompt_file"
-prompt="$prompt
-
-Work directly in this lane. Do not launch subagents, use an Agent or Task tool, or invoke claude, cursor-agent, or codex through Bash. Use the repository's applicable instructions, skills, and scripts within the ownership and permission boundary stated above."
-
-no_nesting="Agent,Bash(claude *),Bash(cursor-agent *),Bash(codex *)"
+no_agent_clis="Bash(claude *),Bash(cursor-agent *),Bash(codex *)"
+no_nesting="Agent,$no_agent_clis"
 
 case "$lane" in
-    fable-plan|fable-final)
+    fable-final)
+        prompt="$prompt
+
+Work directly in this read-only final review lane. You may use the Agent tool to launch bounded read-only subagents for independent review coverage. Tell every subagent not to launch further agents or agent CLIs. Do not invoke claude, cursor-agent, or codex through Bash. Use the repository's applicable instructions, skills, and scripts."
+        ;;
+    *)
+        prompt="$prompt
+
+Work directly in this lane. Do not launch subagents, use an Agent or Task tool, or invoke claude, cursor-agent, or codex through Bash. Use the repository's applicable instructions, skills, and scripts within the ownership and permission boundary stated above."
+        ;;
+esac
+
+case "$lane" in
+    fable-plan)
         require_command claude
         set -- claude -p \
             --model claude-fable-5 \
@@ -136,6 +146,18 @@ case "$lane" in
             --permission-mode plan \
             --tools Read,Grep,Glob,Skill,Bash \
             --disallowedTools "$no_nesting" \
+            --no-session-persistence \
+            --output-format json \
+            "$prompt"
+        ;;
+    fable-final)
+        require_command claude
+        set -- claude -p \
+            --model claude-fable-5 \
+            --effort high \
+            --permission-mode plan \
+            --tools Read,Grep,Glob,Skill,Bash,Agent \
+            --disallowedTools "$no_agent_clis" \
             --no-session-persistence \
             --output-format json \
             "$prompt"
